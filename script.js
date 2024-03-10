@@ -112,3 +112,30 @@ function paginationButton(page) {
     return button;
 }
 
+function filterByName() {
+    const input = document.getElementById("nameFilter");
+    const filter = input.value.toUpperCase();
+    const filteredData = currentData.filter(row => row[2].toUpperCase().includes(filter)); // Assuming name is at index 2
+
+    // Reset to first page and show filtered data
+    currentPage = 1;
+    showFilteredData(filteredData);
+    setupPagination(filteredData.length, rowsPerPage); // Update pagination based on filtered data
+}
+
+function showFilteredData(filteredData) {
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedItems = filteredData.slice(startIndex, endIndex);
+
+    const tableBody = document.getElementById('participantsTable');
+    tableBody.innerHTML = ''; // Clear existing rows
+    paginatedItems.forEach((participant, index) => {
+        const row = tableBody.insertRow();
+        row.insertCell(0).textContent = startIndex + index + 1; // Adjust index for current page
+        row.insertCell(1).textContent = participant[0]; // ID
+        row.insertCell(2).textContent = participant[2]; // Name
+        row.insertCell(3).textContent = participant[5]; // Finish Time
+        row.insertCell(4).textContent = participant[7]; // Place
+    });
+}
