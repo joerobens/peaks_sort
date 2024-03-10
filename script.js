@@ -1,72 +1,114 @@
-// Function to load and display data
-function loadData() {
-    // Assuming the JSON data is available as a global variable or through an API call
-    // For local file access, consider using a server or adjust according to your setup
-    fetch('punishmenthistory_with_place.json')
-        .then(response => response.json())
-        .then(data => {
-            const tableBody = document.getElementById('participantsTable').getElementsByTagName('tbody')[0];
-            tableBody.innerHTML = ''; // Clear existing rows
-            data.forEach((row, index) => {
-                let tr = `<tr>
-                    <td>${row[0]}</td>
-                    <td>${row[2]}</td>
-                    <td>${row[5]}</td>
-                    <td>${row[7]}</td> 
-                </tr>`;
-                tableBody.innerHTML += tr;
-            });
-        });
+let currentPage = 1;
+const rowsPerPage = 100;
+let currentData = []; // Holds the fetched data
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadData();
+});
+
+function showLoading(show) {
+    document.getElementById("loadingOverlay").style.display = show ? "block" : "none";
 }
 
-// Function to sort table columns
-function sortTable(column) {
-    let table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-    table = document.getElementById("participantsTable");
-    switching = true;
-    // Set the sorting direction to ascending:
-    dir = "asc";
-    // Make a loop that will continue until no switching has been done:
-    while (switching) {
-        // Start by saying: no switching is done:
-        switching = false;
-        rows = table.getElementsByTagName("TR");
-        // Loop through all table rows (except the first, which contains table headers):
-        for (i = 1; i < (rows.length - 1); i++) {
-            // Start by saying there should be no switching:
-            shouldSwitch = false;
-            // Get the two elements you want to compare, one from current row and one from the next:
-            x = rows[i].getElementsByTagName("TD")[column];
-            y = rows[i + 1].getElementsByTagName("TD")[column];
-            // Check if the two rows should switch place, based on the direction, asc or desc:
-            if (dir == "asc") {
-                if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-                    // If so, mark as a switch and break the loop:
-                    shouldSwitch= true;
-                    break;
-                }
-            } else if (dir == "desc") {
-                if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+function loadData() {
+    showLoading(true);
+    fetch('punishmenthistory_with_place.json')
+    .then(response => response.json())
+    .then(data => {
+        currentData = data; // Store fetched data
+        showData(currentPage);
+        setupPagination(data.length, rowsPerPage); // Setup pagination based on data length
+        showLoading(false);
+    })
+    .catch(error => {
+        console.error('Error loading the data:', error);
+        showLoading(false);
+    });
+}
+
+function showData(page) {
+    const startIndex = (page - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedItems = currentData.slice(startIndex, endIndex);
+
+    const tableBody = document.getElementById('participantsTable');
+    tableBody.innerHTML = ''; // Clear existing rows
+    paginatedItems.forEach((participant, index) => {
+        const row = tableBody.insertRow();
+        row.insertCell(0).textContent = startIndex + index + 1; // Adjust index for current page
+        row.insertCell(1).textContent = participant[0]; // ID
+        row.insertCell(2).textContent = participant[2]; // Name
+        row.insertCell(3).textContent = participant[5]; // Finish Time
+        row.insertCell(4).textContent = participant[7]; // Place
+    });
+}
+
+function sortTable(columnIndex) {
+    showLoading(true);
+    // Delay sorting to simulate loading (for demonstration purposes)
+    setTimeout(() => {
+        let table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+        table = document.getElementById("participantsTable").parentNode; // Get the table element
+        switching = true;
+        dir = "asc";
+        while (switching) {
+            switching = false;
+            rows = table.getElementsByTagName("TR");
+            for (i = 1; i < (rows.length - 1); i++) {
+                shouldSwitch = false;
+                x = rows[i].getElementsByTagName("TD")[columnIndex];
+                y = rows[i + 1].getElementsByTagName("TD")[columnIndex];
+                if (dir == "asc" && x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase() ||
+                    dir == "desc" && x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
                     shouldSwitch = true;
                     break;
                 }
             }
-        }
-        if (shouldSwitch) {
-            // If a switch has been marked, make the switch and mark that a switch has been done:
-            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-            switching = true;
-            // Each time a switch is done, increase this count by 1:
-            switchcount ++;
-        } else {
-            // If no switching has been done AND the direction is "asc", set the direction to "desc" and run the while loop again.
-            if (switchcount == 0 && dir == "asc") {
+            if (shouldSwitch) {
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                switchcount++;
+            } else if (switchcount == 0 && dir == "asc") {
                 dir = "desc";
                 switching = true;
             }
         }
+        showLoading(false);
+    }, 100); // Adjust as necessary
+}
+
+function setupPagination(totalRows, rowsPerPage) {
+    const pageCount = Math.ceil(totalRows / rowsPerPage);
+    const paginationContainer = document.getElementById('pagination');
+    paginationContainer.innerHTML = ''; // Clear existing pagination buttons
+
+    for (let i = 1; i <= pageCount; i++) {
+        const btn = paginationButton(i);
+        paginationContainer.appendChild(btn);
     }
 }
 
-// Load data on page load
-window.onload = loadData;
+function paginationButton(page) {
+    const button = document.createElement('button');
+    button.innerText = page;
+    button.className = 'btn btn-sm btn-outline-primary mx-1'; // Ensure consistent class assignment
+
+    // Initially set the active class on the current page button
+    if (currentPage === page) {
+        button.classList.add('active');
+    }
+
+    button.addEventListener('click', function() {
+        currentPage = page;
+        showData(page);
+
+        // Update active state for buttons
+        document.querySelectorAll('#pagination button').forEach(btn => {
+            btn.classList.remove('active'); // Remove 'active' from all buttons
+        });
+        button.classList.add('active'); // Add 'active' to the clicked button
+    });
+
+    return button;
+}
+
